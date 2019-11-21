@@ -29,10 +29,10 @@
  */
 
 /**
- * \file 
- * 
+ * \file
+ *
  * \author Bhaskara Marthi
- * 
+ *
  */
 
 #include <twist_recovery/twist_recovery.h>
@@ -72,19 +72,24 @@ void TwistRecovery::initialize (std::string name, tf::TransformListener* tf,
 
   pub_ = nh_.advertise<gm::Twist>("cmd_vel", 10);
   ros::NodeHandle private_nh("~/" + name);
-
+  /*
   {
-  bool found=true;
-  found = found && private_nh.getParam("linear_x", base_frame_twist_.linear.x);
-  found = found && private_nh.getParam("linear_y", base_frame_twist_.linear.y);
-  found = found && private_nh.getParam("angular_z", base_frame_twist_.angular.z);
-  if (!found) {
-    ROS_FATAL_STREAM ("Didn't find twist parameters in " << private_nh.getNamespace());
-    ros::shutdown();
+    bool found=true;
+    found = found && private_nh.getParam("linear_x", base_frame_twist_.linear.x);
+    found = found && private_nh.getParam("linear_y", base_frame_twist_.linear.y);
+    found = found && private_nh.getParam("angular_z", base_frame_twist_.angular.z);
+    if (!found) {
+      ROS_FATAL_STREAM ("Didn't find twist parameters in " << private_nh.getNamespace());
+      ros::shutdown();
+    }
   }
-  }
+  */
 
-  private_nh.param("duration", duration_, 1.0);
+  private_nh.param("linear_x", base_frame_twist_.linear.x, -0.2);
+  private_nh.param("linear_y", base_frame_twist_.linear.y, 0.0);
+  private_nh.param("angular_z", base_frame_twist_.angular.z, 0.0);
+
+  private_nh.param("duration", duration_, 2.0);
   private_nh.param("linear_speed_limit", linear_speed_limit_, 0.3);
   private_nh.param("angular_speed_limit", angular_speed_limit_, 1.0);
   private_nh.param("linear_acceleration_limit", linear_acceleration_limit_, 4.0);
@@ -94,7 +99,7 @@ void TwistRecovery::initialize (std::string name, tf::TransformListener* tf,
 
   ROS_INFO_STREAM_NAMED ("top", "Initialized twist recovery with twist " <<
                           base_frame_twist_ << " and duration " << duration_);
-  
+
   initialized_ = true;
 }
 
@@ -141,7 +146,7 @@ double TwistRecovery::nonincreasingCostInterval (const gm::Pose2D& current, cons
     }
     cost = next_cost;
   }
-  
+
   return t-simulation_inc_;
 }
 
@@ -187,19 +192,18 @@ void TwistRecovery::runBehavior ()
 
   // Figure out how long we can safely run the behavior
   const gm::Pose2D& current = getCurrentLocalPose();
-  
+
   const double d = nonincreasingCostInterval(current, base_frame_twist_);
   ros::Rate r(controller_frequency_);
   ROS_INFO_NAMED ("top", "Applying (%.2f, %.2f, %.2f) for %.2f seconds", base_frame_twist_.linear.x,
                    base_frame_twist_.linear.y, base_frame_twist_.angular.z, d);
-                   
+
   // We'll now apply this twist open-loop for d seconds (scaled so we can guarantee stopping at the end)
   for (double t=0; t<d; t+=1/controller_frequency_) {
     pub_.publish(scaleGivenAccelerationLimits(base_frame_twist_, d-t));
     r.sleep();
-  }    
+  }
 }
 
 
 } // namespace twist_recovery
-
