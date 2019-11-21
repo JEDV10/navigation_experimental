@@ -28,14 +28,6 @@
  *
  */
 
-/**
- * \file
- *
- * Recovery behavior based on executing a particular twist
- *
- * \author Bhaskara Marthi
- */
-
 #ifndef TWIST_RECOVERY_TWIST_RECOVERY_H
 #define TWIST_RECOVERY_TWIST_RECOVERY_H
 
@@ -71,7 +63,7 @@ namespace twist_recovery
 
       geometry_msgs::Pose2D getCurrentLocalPose () const;
       geometry_msgs::Twist scaleGivenAccelerationLimits (const geometry_msgs::Twist& twist, const double time_remaining) const;
-      double nonincreasingCostInterval (const geometry_msgs::Pose2D& current, const geometry_msgs::Twist& twist) const;
+      double nonincreasingCostInterval (const geometry_msgs::Pose2D& current, const geometry_msgs::Twist& twist, const double min_time) const;
       double normalizedPoseCost (const geometry_msgs::Pose2D& pose) const;
       geometry_msgs::Twist transformTwist (const geometry_msgs::Pose2D& pose) const;
 

@@ -28,13 +28,6 @@
  *
  */
 
-/**
- * \file
- *
- * \author Bhaskara Marthi
- *
- */
-
 #include <twist_recovery/twist_recovery.h>
 #include <pluginlib/class_list_macros.hpp>
 #include <tf/transform_datatypes.h>
@@ -79,17 +72,17 @@ namespace twist_recovery
         found = found && private_nh.getParam("linear_y", base_frame_twist_.linear.y);
         found = found && private_nh.getParam("angular_z", base_frame_twist_.angular.z);
         if (!found) {
-        ROS_FATAL_STREAM ("Didn't find twist parameters in " << private_nh.getNamespace());
-        ros::shutdown();
-      }
-    }
-    */
+          ROS_FATAL_STREAM ("Didn't find twist parameters in " << private_nh.getNamespace());
+          ros::shutdown();
+        }
+        }
+        */
 
     private_nh.param("linear_x", base_frame_twist_.linear.x, -0.2);
     private_nh.param("linear_y", base_frame_twist_.linear.y, 0.0);
     private_nh.param("angular_z", base_frame_twist_.angular.z, 0.0);
 
-    private_nh.param("duration", duration_, 2.5);
+    private_nh.param("duration", duration_, 3.0);
     private_nh.param("linear_speed_limit", linear_speed_limit_, 0.3);
     private_nh.param("angular_speed_limit", angular_speed_limit_, 1.0);
     private_nh.param("linear_acceleration_limit", linear_acceleration_limit_, 4.0);
@@ -131,17 +124,29 @@ namespace twist_recovery
 
   // Return the maximum d <= duration_ such that starting at the current pose,
   // the cost is nonincreasing for d seconds if we follow twist
-  /// It might also be good to have a threshold such that we're allowed to have lethal cost for at most
-  /// the first k of those d seconds, but this is not done
-  double TwistRecovery::nonincreasingCostInterval (const geometry_msgs::Pose2D& current_position, const geometry_msgs::Twist& twist) const
+  // There is also a minimum time that we are allowed to have lethal cost for
+  // the first k of those d seconds.
+  double TwistRecovery::nonincreasingCostInterval (const geometry_msgs::Pose2D& current_position, const geometry_msgs::Twist& twist, const double min_time=0.0) const
   {
+    ROS_INFO_NAMED ("top", "Time allowing lethal cost: %.2f", min_time);
+    if(min_time > duration_) {
+      ROS_ERROR_STREAM_NAMED("top", "Parameter 'min_time' greater than maximum duration allowed to twist_recovery [" << duration_ << "]");
+      return 0;
+    }
     double cost = normalizedPoseCost(current_position); // Cost of the original positon
+    double cost_after_min_time = normalizedPoseCost(forwardSimulate(current_position, twist, min_time)); // Cost after the first k seconds we allow lethal cost
+    if (cost_after_min_time > cost) {
+      ROS_WARN_STREAM_NAMED("cost", "Cost after time allowing lethal cost [" << cost_after_min_time <<
+      "] is greater than original cost [" << cost << "]");
+    }
+
     double t; // Will hold the first time that is invalid
-    for (t=simulation_inc_; t<=duration_; t+=simulation_inc_) {
+    cost = cost_after_min_time;
+    for (t=min_time+simulation_inc_; t<=duration_; t+=simulation_inc_) {
       const double next_cost = normalizedPoseCost(forwardSimulate(current_position, twist, t));
       if (next_cost > cost) {
-        ROS_DEBUG_STREAM_NAMED ("cost", "Cost at " << t << " and pose " << forwardSimulate(current_position, twist, t)
-        << " is " << next_cost << " which is greater than previous cost " << cost);
+        ROS_DEBUG_STREAM_NAMED ("cost", "Cost after " << t << "seconds and pose " << forwardSimulate(current_position, twist, t)
+        << " [" << next_cost << "] is greater than previous cost [" << cost << "]");
         break;
       }
       cost = next_cost;
@@ -196,7 +201,7 @@ namespace twist_recovery
     const geometry_msgs::Pose2D& current_pose = getCurrentLocalPose();
     const double max_duration = nonincreasingCostInterval(current_pose, base_frame_twist_);
     ros::Rate r(controller_frequency_);
-    ROS_INFO_NAMED ("top", "Applying (%.2f, %.2f, %.2f) for %.2f seconds", base_frame_twist_.linear.x,
+    ROS_WARN_NAMED ("top", "Applying Twist recovery (%.2f, %.2f, %.2f) for %.2f seconds", base_frame_twist_.linear.x,
     base_frame_twist_.linear.y, base_frame_twist_.angular.z, max_duration);
 
     // We will now apply this twist open-loop for d seconds (scaled so we can
