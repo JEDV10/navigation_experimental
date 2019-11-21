@@ -29,8 +29,8 @@
  */
 
 /**
- * \file 
- * 
+ * \file
+ *
  * Recovery behavior based on executing a particular twist
  *
  * \author Bhaskara Marthi
@@ -40,65 +40,66 @@
 #define TWIST_RECOVERY_TWIST_RECOVERY_H
 
 #include <nav_core/recovery_behavior.h>
-#include <base_local_planner/costmap_model.h>
 #include <costmap_2d/costmap_2d_ros.h>
+#include <base_local_planner/costmap_model.h>
 #include <geometry_msgs/Pose2D.h>
 
 namespace twist_recovery
 {
 
-/// Recovery behavior that takes a given twist and tries to execute it for up to
-/// d seconds, or until reaching an obstacle.  
-class TwistRecovery : public nav_core::RecoveryBehavior
-{
-public:
-  
-  /// Doesn't do anything: initialize is where the actual work happens
-  TwistRecovery();
+  /// Recovery behavior that takes a given twist and tries to execute it for up to
+  /// d seconds, or until reaching an obstacle.
+  class TwistRecovery : public nav_core::RecoveryBehavior
+  {
+  public:
 
-  ~TwistRecovery();
+    /// Constructor
+    TwistRecovery();
 
-  /// Initialize the parameters of the behavior
-  void initialize (std::string n, tf::TransformListener* tf,
-                   costmap_2d::Costmap2DROS* global_costmap,
-                   costmap_2d::Costmap2DROS* local_costmap);
+    /// Destructor
+    ~TwistRecovery();
 
-  /// Run the behavior
-  void runBehavior();
+    /// Initialize the parameters of the behavior
+    void initialize (std::string n, tf::TransformListener* tf,
+      costmap_2d::Costmap2DROS* global_costmap,
+      costmap_2d::Costmap2DROS* local_costmap);
 
-private:
+      /// Run the behavior
+      void runBehavior();
 
-  geometry_msgs::Pose2D getCurrentLocalPose () const;
-  geometry_msgs::Twist scaleGivenAccelerationLimits (const geometry_msgs::Twist& twist, const double time_remaining) const;
-  double nonincreasingCostInterval (const geometry_msgs::Pose2D& current, const geometry_msgs::Twist& twist) const;
-  double normalizedPoseCost (const geometry_msgs::Pose2D& pose) const;
-  geometry_msgs::Twist transformTwist (const geometry_msgs::Pose2D& pose) const;
+    private:
 
-  ros::NodeHandle nh_;
-  costmap_2d::Costmap2DROS* global_costmap_;
-  costmap_2d::Costmap2DROS* local_costmap_;
-  std::string name_;
-  tf::TransformListener* tf_;
-  ros::Publisher pub_;
-  bool initialized_;
+      geometry_msgs::Pose2D getCurrentLocalPose () const;
+      geometry_msgs::Twist scaleGivenAccelerationLimits (const geometry_msgs::Twist& twist, const double time_remaining) const;
+      double nonincreasingCostInterval (const geometry_msgs::Pose2D& current, const geometry_msgs::Twist& twist) const;
+      double normalizedPoseCost (const geometry_msgs::Pose2D& pose) const;
+      geometry_msgs::Twist transformTwist (const geometry_msgs::Pose2D& pose) const;
 
-  // Memory owned by this object
-  // Mutable because footprintCost is not declared const
-  mutable base_local_planner::CostmapModel* world_model_;
+      ros::NodeHandle nh_;
+      costmap_2d::Costmap2DROS* global_costmap_;
+      costmap_2d::Costmap2DROS* local_costmap_;
+      std::string name_;
+      tf::TransformListener* tf_;
+      ros::Publisher pub_;
+      bool initialized_;
 
-  geometry_msgs::Twist base_frame_twist_;
-  
-  double duration_;
-  double linear_speed_limit_;
-  double angular_speed_limit_;
-  double linear_acceleration_limit_;
-  double angular_acceleration_limit_;
-  double controller_frequency_;
-  double simulation_inc_;
-  
-  
-};
+      // Memory owned by this object
+      // Mutable because footprintCost is not declared const
+      mutable base_local_planner::CostmapModel* world_model_;
 
-} // namespace twist_recovery
+      geometry_msgs::Twist base_frame_twist_;
 
-#endif // include guard
+      double duration_;
+      double linear_speed_limit_;
+      double angular_speed_limit_;
+      double linear_acceleration_limit_;
+      double angular_acceleration_limit_;
+      double controller_frequency_;
+      double simulation_inc_;
+
+
+    };
+
+  } // namespace twist_recovery
+
+  #endif // include guard
